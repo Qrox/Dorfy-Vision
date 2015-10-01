@@ -1,0 +1,8 @@
+Thumbs.db
+*.o
+ExeDebug/
+ExeRelease/
+DllDebug/
+DllRelease/
+ModelDebug/
+ModelRelease/

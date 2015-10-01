@@ -1,0 +1,169 @@
+#ifdef BUILD_DLL
+
+#ifndef __DORFY_VISION__DWARF_FORTRESS_H__
+#define __DORFY_VISION__DWARF_FORTRESS_H__
+
+#include <windows.h>
+#include <string>
+#include "DwarfDataGeneral.h"
+#include "DwarfBiome.h"
+#include "DwarfRegionBlock.h"
+#include "DwarfBlock.h"
+#include "DwarfItem.h"
+#include "DwarfInorganic.h"
+#include "DwarfCreature.h"
+#include "DwarfLanguage.h"
+#include "DwarfDescriptor.h"
+#include "DwarfUI.h"
+
+using namespace std;
+
+namespace DwarfFortress {
+    union World {
+        __at(94, dword region_block_dimension_x);
+        __at(98, dword region_block_dimension_y);
+        __at(CC, Set<NearbyRegionBlock *> nearby_region_blocks);
+        __at(1C0, Set<Biome *> biomes);
+        __at(1F0, RegionBlock ** region_blocks);
+    };
+
+    union Map {
+        //__at(C0, Set<Construction *> constructions);
+        __at(13A64, Set<Creature *> creatures);
+        __at(13B18, Set<Item *> items);
+        //__at(14390, Set<Building *> buildings);
+        __at(10CA94, Block3d **** block3d);
+        __at(10CAA8, Block2d *** block2d);
+        __at(10CAB8, Vector3<dword> dimension);
+        __at(10CAC4, dword region_offset_x);
+        __at(10CAC8, dword region_offset_y);
+        __at(10F9A0, World * world);
+
+        __at(110204, Set<InorganicRaw *> inorganic_raw);
+        __at(110224, Set<VegetationRaw *> vegetation_raw);
+        __at(110548, Set<LanguageRaw *> language_raw);
+        __at(110558, Set<LanguageSymRaw *> language_sym_raw);
+        __at(110578, Set<RaceLanguageRaw *> race_language_raw);
+        __at(115F88, Set<ColorDescriptor *> descriptor_color);
+
+        Block3d & getBlock3d(dword tile_x, dword tile_y, dword tile_z);
+        Block2d & getBlock2d(dword tile_x, dword tile_y);
+        bool getRegionBlockCoord(dword x, dword y, dword z, dword & rbx, dword & rby);
+        NearbyRegionBlock & getNearbyRegionBlock(dword x, dword y, dword z);
+        Biome & getBiome(dword x, dword y, dword z);
+        Biome::Layer & getLayer(dword x, dword y, dword z);
+        TileStructure::Enum tileStructure(dword x, dword y, dword z);
+        TileInfo tileInfo(dword x, dword y, dword z);
+        TileDefinition tileDefinition(dword x, dword y, dword z);
+        int32 getLayerSpecies(dword x, dword y, dword z);
+        int32 getMineralSpecies(dword x, dword y, dword z);
+        int32 getLavaStoneSpecies(dword x, dword y, dword z);
+        void getGrass(dword x, dword y, dword z, byte & density, int32 & species);
+        void getContaminant(dword x, dword y, dword z, byte & size, int16 & material, int32 & species);
+    };
+
+    union Game {
+        __at(0, union {
+        } code);
+        __at(95B000, union { // end of code, start of read-only memory
+            union {
+            } item;
+            union {
+                __at(2EC38, VTable options);
+                __at(2EC90, VTable loading);
+                __at(38134, VTable dwarf_fortress);
+                __at(4B0E4, VTable main_menu);
+                __at(4B168, VTable announcement);
+                __at(8277C, VTable keybinding);
+            } ui;
+        } vtables);
+        __at(A5C000, union { // end of read-only memory, start of static memory
+            __at(D40, Vector3<int32> cursor);
+            __at(E18, byte side_menu_pos);
+            __at(E19, byte side_map_pos);
+            __at(15E4, byte fps_on);
+            // used for :
+            //     date calculation in the stock menu
+            //     time progression
+            // range 0 ~ 10079, increases by 1 every time df.tick reaches a multiple of 10
+            // once reaches 10080, season is increased by 1 and season_time resets.
+            __at(2E57D0, dword season_time);
+            // used for :
+            //     date calculation in the stock menu
+            //     time progression
+            // range 0 ~ 3, corresponding spring ~ winter
+            __at(2E58F6, byte season);
+            __at(37DFE8, int32 view_x);
+            // used for :
+            //     date calculation in the announcement & the report menus
+            //     not used for time progression
+            // range 0 ~ 403199
+            __at(3927C8, dword ticks);
+            __at(3AC1D4, int32 view_z);
+            __at(3AC1F8, dword look_menu_index);
+            __at(3AC200, int32 view_y);
+            __at(3C4918, dword year);
+            __at(9BBF18, dword ticks_per_sec);
+            __at(9BBF1C, dword frames_per_sec);
+            __at(9BC004, float32 console_color_rgb[16][3]); // [bright:r:g:b]
+            __at(9BFB9E, dword player_civilization);
+            __at(9C3A58, word side_menu_ui);
+            __at(9C3B50, UI::Base * ui_bottom);
+            __at(B7E530, Map map);
+            __at(DD9CC4, int32 view_width);
+            __at(DD9CC8, int32 view_height);
+        });
+
+        UI::Base & getTopmostUI();
+        dword getFortressModeViewWidth();
+        dword getFortressModeViewHeight();
+
+        string const & seasonName();
+        dword month();
+        string const & dwarvenMonthName();
+        dword day();
+        string dayName();
+
+        static float const * getHardCodedMaterialColor(int32 material);
+        float const * getConsoleColor(byte console_color, byte console_color_bright);
+        float const * checkFineColor(int32 index, byte console_color, byte console_color_bright);
+        TemplateRaw & getTemplate(int16 material, int32 species);
+        bool isMetal(int16 material, int32 species);
+        bool isGlass(int16 material, int32 species);
+        bool isMetalOrGlass(int16 material, int32 species);
+        float const * getColorOfMaterial(int16 material, int32 species, MaterialState::Enum state, TemplateColorType::Enum type, bool console_strict);
+        float const * getColorOfMaterial(int16 material, int32 species, MaterialState::Enum state, byte console_color, byte console_color_bright, bool console_strict);
+    };
+
+    namespace ConsoleColor {
+        enum Enum {
+            black,
+            blue,
+            green,
+            cyan,
+            red,
+            magenta,
+            brown,
+            light_gray,
+
+            dark_gray,
+            light_blue,
+            light_green,
+            light_cyan,
+            light_red,
+            light_magenta,
+            yellow,
+            white,
+        };
+    }
+}
+
+extern DwarfFortress::Game * pDF;
+extern HMODULE dfModule;
+extern HWND dfWindow;
+
+#define df (*pDF)
+
+#endif
+
+#endif
