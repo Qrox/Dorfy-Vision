@@ -8,9 +8,9 @@
 using namespace std;
 
 #ifdef DEBUG
-char constexpr dllPath[] = "C:\\Users\\Qrox\\Eclipse\\Dorfy Vision\\DllDebug\\Dorfy Vision.dll";
+string dllPath = "C:\\Users\\Qrox\\Eclipse\\Dorfy Vision\\DllDebug\\Dorfy Vision.dll";
 #else
-char constexpr dllPath[] = "Dorfy Vision.dll";
+string dllPath = "Dorfy Vision.dll";
 #endif
 
 char constexpr dorfProcessName[] = "Dwarf Fortress.exe";
@@ -54,7 +54,7 @@ int main(void) {
     PVOID loadLibraryParameter = nullptr, remoteParam = nullptr;
 
     do {
-        localDll = LoadLibrary(dllPath);
+        localDll = LoadLibrary(dllPath.data());
         if (!localDll) {
             cout << "failed to load Dll \"" << dllPath << "\". error code: " << GetLastError() << endl;
             break;
@@ -71,15 +71,48 @@ int main(void) {
             cout << "cannot find kernel32.dll" << endl;
             break;
         }
-        loadLibraryParameter = VirtualAllocEx(dorf, 0, sizeof(dllPath), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+
+        unsigned int dirLen = GetCurrentDirectory(0, nullptr);
+        if (dirLen == 0) {
+            cout << "failed to get the working directory" << endl;
+            break;
+        }
+        char * pcurrentDir = new char[dirLen];
+        if (pcurrentDir == nullptr) {
+            cout << "failed to allocate memory to get the working directory" << endl;
+            break;
+        }
+        if (GetCurrentDirectory(dirLen, pcurrentDir) != dirLen - 1) {
+            cout << "failed to get the working directory" << endl;
+            break;
+        }
+        string currentDir = string(pcurrentDir);
+        delete [] pcurrentDir;
+        if (currentDir.back() != '\\' && currentDir.back() != '/') currentDir.push_back('\\');
+
+#ifdef DEBUG
+        loadLibraryParameter = VirtualAllocEx(dorf, 0, dllPath.length(), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
         if (!loadLibraryParameter) {
             cout << "failed to allocate parameter memory for kernel32::LoadLibraryA" << endl;
             break;
         }
-        if (!WriteProcessMemory(dorf, loadLibraryParameter, dllPath, sizeof(dllPath), 0)) {
+        if (!WriteProcessMemory(dorf, loadLibraryParameter, dllPath.data(), dllPath.length(), 0)) {
             cout << "failed to write to parameter memory for kernel32::LoadLibraryA" << endl;
             break;
         }
+#else
+        string fullPath = currentDir + dllPath;
+        loadLibraryParameter = VirtualAllocEx(dorf, 0, fullPath.length(), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+        if (!loadLibraryParameter) {
+            cout << "failed to allocate parameter memory for kernel32::LoadLibraryA" << endl;
+            break;
+        }
+        if (!WriteProcessMemory(dorf, loadLibraryParameter, fullPath.data(), fullPath.length(), 0)) {
+            cout << "failed to write to parameter memory for kernel32::LoadLibraryA" << endl;
+            break;
+        }
+#endif
+
         HANDLE thread = CreateRemoteThread(dorf, 0, 0, (LPTHREAD_START_ROUTINE) GetProcAddress(kernel32, "LoadLibraryA"), loadLibraryParameter, 0, 0);
         if (!thread) {
             cout << "failed to call kernel32::LoadLibraryA" << endl;
@@ -106,26 +139,11 @@ int main(void) {
             break;
         }
 
-        unsigned int dirLen = GetCurrentDirectory(0, nullptr);
-        if (dirLen == 0) {
-            cout << "failed to get the working directory" << endl;
-            break;
-        }
-        char * currentDir = new char[dirLen];
-        if (currentDir == nullptr) {
-            cout << "failed to allocate memory to get the working directory" << endl;
-            break;
-        }
-        if (GetCurrentDirectory(dirLen, currentDir) != dirLen - 1) {
-            cout << "failed to get working directory" << endl;
-            break;
-        }
-
         struct {
             DWORD processId;
             char * currentDir;
         } param;
-        remoteParam = VirtualAllocEx(dorf, 0, sizeof(param) + dirLen, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+        remoteParam = VirtualAllocEx(dorf, 0, sizeof(param) + currentDir.length(), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
         if (remoteParam == nullptr) {
             cout << "failed to allocate memory for DLL parameters" << endl;
             break;
@@ -133,11 +151,10 @@ int main(void) {
         param.processId = GetCurrentProcessId();
         param.currentDir = (char *) remoteParam + sizeof(param);
         if (!WriteProcessMemory(dorf, remoteParam, &param, sizeof(param), 0) ||
-            !WriteProcessMemory(dorf, param.currentDir, currentDir, dirLen, 0)) {
+            !WriteProcessMemory(dorf, param.currentDir, currentDir.data(), currentDir.length(), 0)) {
             cout << "failed to write parameters into DLL" << endl;
             break;
         }
-        delete [] currentDir;
 
         thread = CreateRemoteThread(dorf, 0, 0, (LPTHREAD_START_ROUTINE) ((DWORD) dllModule + entryOffset), remoteParam, 0, 0);
         if (!thread) {

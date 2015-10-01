@@ -1,10 +1,12 @@
 #ifdef BUILD_DLL
 
-#ifdef DEBUG
+//#define FORCE_CONSOLE
+
+#if defined(DEBUG) || defined(FORCE_CONSOLE)
 #define WINVER 0x0501   // fix mingw weird errors
+#endif
 #include "Types.h"
 typedef int64 off64_t;
-#endif
 
 #include <iostream>
 #include <sstream>
@@ -18,7 +20,7 @@ typedef int64 off64_t;
 #include "MainWindow.h"
 #include "Graphics.h"
 
-#ifdef DEBUG
+#if defined(DEBUG) || defined(FORCE_CONSOLE)
 extern "C" _CRTIMP FILE* __cdecl __MINGW_NOTHROW _fdopen (int, const char*); // fix mingw weird errors
 #endif
 
@@ -30,7 +32,7 @@ HMODULE dllModule = 0;
 
 void cleanUp() {
     cout << "cleaning up..." << endl;
-#ifdef DEBUG
+#if defined(DEBUG) || defined(FORCE_CONSOLE)
     EnableMenuItem(GetSystemMenu(GetConsoleWindow(), FALSE), SC_CLOSE, MF_BYCOMMAND | MF_ENABLED);
     DrawMenuBar(GetConsoleWindow());
     cout << "freeing the console..." << endl;
@@ -85,7 +87,7 @@ DLLEXTERN DWORD DllEntry(LPVOID v) {
         DWORD processId;
         char * currentDir;
     } * param = (PARAM *) v;
-#ifdef DEBUG
+#if defined(DEBUG) || defined(FORCE_CONSOLE)
     DWORD callingProcess = param->processId;
     if (!AttachConsole(callingProcess)) {
         stringstream s;
@@ -105,7 +107,7 @@ DLLEXTERN DWORD DllEntry(LPVOID v) {
     cout << "dll main thread started" << endl;
     currentDir = param->currentDir;
     if (currentDir.back() != '/' && currentDir.back() != '\\') {
-        currentDir += '/';
+        currentDir.push_back('\\');
     }
     cout << "working dir: \"" << currentDir << "\"" << endl;
     if (dwarfDataInit() &&

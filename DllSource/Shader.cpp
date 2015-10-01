@@ -106,9 +106,9 @@ bool shaderprogram::link() {
     else {
         cout << "linker logs:" << endl;
         printlog();
-        return true;
     }
 #endif
+    return true;
 }
 
 void shaderprogram::apply() const {

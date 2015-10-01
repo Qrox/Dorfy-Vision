@@ -60,11 +60,11 @@ float32 const Model::no_size[3] = {0, 0, 0};
 Model::Model(char const * file) : Model(string(file)) {
 }
 
-Model::Model(string file) {
-    file = currentDir + file;
+Model::Model(string local) {
+    string file = currentDir + local;
     int hfile = open(file.data(), _O_RDONLY | _O_BINARY);
     if (hfile == -1) {
-        cout << "failed to load model file \"" << file << "\"!" << endl;
+        cout << "failed to load model file \"" << local << "\"!" << endl;
         data = nullptr;
         end = nullptr;
     } else {

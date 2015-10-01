@@ -10,6 +10,7 @@
 #include "Graphics.h"
 #include "MainWindow.h"
 
+#undef max
 #undef M_PI
 double constexpr M_PI = 3.14159265358979323846;
 
@@ -560,7 +561,7 @@ void executeCommand(string cmdline) {
                 if (prec <= 2 || prec > 10) {
                     cout << "usage: ellipsoid <center> <x end> <y end> <z end> [precision 3 ~ 10]" << endl;
                 }
-                dword thetacnt = prec, phicnt = thetacnt / 2;
+                dword thetacnt = prec, phicnt = std::max(dword(2), thetacnt / 2);
                 dword phii = 0;
                 float cosphi0, sinphi0, cosphi1, sinphi1;
                 vector<vector3f> vs;
